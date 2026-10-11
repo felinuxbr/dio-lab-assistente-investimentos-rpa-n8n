@@ -1,0 +1,419 @@
+{
+  "name": "RPA_N8N_Python",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "clientes",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [
+        -1328,
+        -544
+      ],
+      "id": "05c45831-a870-42bc-adfc-5bb00082299a",
+      "name": "Whk_Busca_Clientes",
+      "webhookId": "82b2b93b-23ad-4ce2-9cf0-1b67e2b68215"
+    },
+    {
+      "parameters": {
+        "content": "## Busca a lista de clientes com em um script python que é exeutado no google colab. ",
+        "height": 288,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1408,
+        -704
+      ],
+      "typeVersion": 1,
+      "id": "446e4943-81b2-4ed5-895e-4af942c8889e",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "url": "https://digitalinnovationone.github.io/dio-lab-assistente-investimentos-rpa-n8n/data.csv",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.5,
+      "position": [
+        -896,
+        -400
+      ],
+      "id": "5a29b10f-a419-4037-af0d-ceef5f5ed439",
+      "name": "Busca_Dados_Investimentos"
+    },
+    {
+      "parameters": {
+        "content": "## Busca arquivo CSV com os dados de investimentos.",
+        "height": 304,
+        "width": 256,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -976,
+        -528
+      ],
+      "typeVersion": 1,
+      "id": "47ae2450-710b-4fdd-bdfa-38bd727144ee",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "## Organiza os dados de investimentos do arquivo CSV",
+        "height": 288,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -512,
+        -704
+      ],
+      "typeVersion": 1,
+      "id": "042a5f96-682e-4f66-9fc1-0736da22e51a",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Pega o CSV como texto vindo do HTTP Request\nconst csvRaw = $json.data ?? $json.body ?? $json;\nconst text = (typeof csvRaw === \"string\") ? csvRaw : JSON.stringify(csvRaw);\n\nconst lines = text.split(/\\r?\\n/).map(l => l.trim()).filter(Boolean);\nconst headers = lines[0].split(\",\").map(h => h.trim());\n\nconst investimentos = lines.slice(1).map(line => {\n    const cols = line.split(\",\").map(c => c.trim());\n    const obj = {};\n    headers.forEach((h, i) => obj[h] = cols[i] ?? \"\");\n\n    // Transforma mínimo de string para número\n    obj.minimo = Number(String(obj.minimo).replace(/[^\\d]/g, \"\")) || 0;\n\n    return obj;\n});\n\nreturn [{ json: { investimentos } }];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -448,
+        -560
+      ],
+      "id": "65ce1e4b-7545-48e9-999d-299085d314d8",
+      "name": "Organiza_Dados"
+    },
+    {
+      "parameters": {
+        "content": "## Combina os dados dos clientes com os dados de investimentos",
+        "height": 288,
+        "width": 272,
+        "color": 5
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -192,
+        -1024
+      ],
+      "typeVersion": 1,
+      "id": "6b3b4a12-58c2-4f7d-b301-520f27a40c75",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "mode": "combine",
+        "combineBy": "combineByPosition",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.merge",
+      "typeVersion": 3.2,
+      "position": [
+        -112,
+        -896
+      ],
+      "id": "51054fb3-d568-4b3e-b0ce-95f58ea8a587",
+      "name": "Merge_Combina_Clientes_Investimentos"
+    },
+    {
+      "parameters": {
+        "jsCode": "// 1. Recupera os dados de entrada\nconst dados = $input.first().json;\nconst clientes = dados.body?.clientes || dados.clientes || [];\nconst investimentos = dados.investimentos || [];\n\n// 2. Diretrizes humanizadas por perfil\nconst diretrizes = {\n  \"Conservador\": \"priorizar a segurança do seu patrimônio e a previsibilidade da renda fixa\",\n  \"Moderado\": \"construir um mix equilibrado entre a proteção da renda fixa e o crescimento da renda variável\",\n  \"Arrojado\": \"maximizar o potencial de retorno a longo prazo com ênfase em ativos de renda variável\"\n};\n\n// 3. Monta a recomendação consultiva para cada cliente\nreturn clientes.map(cliente => {\n  const primeiroNome = cliente.nome.split(\" \")[0];\n  const opcoes = investimentos.filter(inv => \n    inv.perfil.toLowerCase() === cliente.perfil.toLowerCase()\n  );\n\n  // Formata os produtos destacando o valor mínimo de entrada\n  const listaProdutos = opcoes.map(inv => {\n    const minimoFormatado = Number(inv.minimo).toLocaleString(\"pt-BR\", {\n      style: \"currency\",\n      currency: \"BRL\"\n    });\n    return `• ${inv.produto} — Aporte mínimo: ${minimoFormatado} | Rentabilidade esperada: ${inv.rentabilidade}`;\n  }).join(\"\\n\");\n\n  const focoPerfil = diretrizes[cliente.perfil] || \"alinhar as melhores oportunidades aos seus planos\";\n\n  const mensagemHumanizada = \n`Olá, ${primeiroNome}, tudo bem?\n\nAnalisando a sua carteira, identificamos que o seu perfil de investidor é ${cliente.perfil}. O caminho ideal agora é ${focoPerfil}.\n\nPensando no seu saldo atual de ${cliente.saldo}, selecionamos algumas alternativas sob medida para você começar:\n\n${listaProdutos}\n\nFicamos à disposição para esclarecer qualquer detalhe e ajudar você a realizar as primeiras aplicações com total tranquilidade!`;\n\n  return {\n    json: {\n      nome: cliente.nome,\n      email: cliente.email,\n      saldo: cliente.saldo,\n      perfil: cliente.perfil,\n      mensagem: mensagemHumanizada,\n      opcoes_recomendadas: opcoes\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        272,
+        -560
+      ],
+      "id": "39e6065c-852e-48fe-aa61-50e694b5dad5",
+      "name": "Gera_mensagem_Fixa"
+    },
+    {
+      "parameters": {
+        "content": "## Cruza os perfis dos clientes com os investimentos disponíveis e cria mensagens de indicação de investimentos",
+        "height": 352,
+        "width": 272,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        192,
+        -752
+      ],
+      "typeVersion": 1,
+      "id": "698a6425-7bad-445c-ba64-07e2907b0e7f",
+      "name": "Sticky Note4"
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  // 1. Extrai a string de texto gerada pela IA\n  let rawText = item.json.output?.[0]?.content?.[0]?.text || \"\";\n\n  // 2. Remove eventuais delimitadores de código markdown (```json ... ```)\n  rawText = rawText.replace(/```json/gi, \"\").replace(/```/g, \"\").trim();\n\n  // 3. Converte a string para objeto JSON\n  let emailData = {};\n  try {\n    emailData = JSON.parse(rawText);\n  } catch (error) {\n    emailData = {\n      to: \"\",\n      subject: \"Informações sobre seus investimentos\",\n      text_body: rawText,\n      html_body: `<p>${rawText}</p>`\n    };\n  }\n\n  // 4. Retorna a estrutura com todos os campos necessários para o Gmail\n  return {\n    json: {\n      to: emailData.to || \"\",\n      subject: emailData.subject || \"\",\n      message: emailData.html_body || emailData.text_body || \"\",\n      html: emailData.html_body || \"\",\n      text: emailData.text_body || \"\"\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        -560
+      ],
+      "id": "a7be7b33-b14d-4706-88aa-7cdb7b556449",
+      "name": "Cria_Estrutura_Gmail"
+    },
+    {
+      "parameters": {
+        "content": "## Gera Mensagens personalizadas com indicação de investimentos para cada cliente de acordo com seu perfil",
+        "height": 352,
+        "width": 352,
+        "color": "#D31212"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        608,
+        -752
+      ],
+      "typeVersion": 1,
+      "id": "d9f78db8-8031-47c7-9ca5-2d18b0b02ffa",
+      "name": "Sticky Note5"
+    },
+    {
+      "parameters": {
+        "content": "## Cria uma estrutura com as mensagens geradas para ser enviada pelo gmail.",
+        "height": 352,
+        "width": 256
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1136,
+        -752
+      ],
+      "typeVersion": 1,
+      "id": "72556058-ee37-479d-a88a-b8fa608f397e",
+      "name": "Sticky Note6"
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [
+        2064,
+        -560
+      ],
+      "id": "2c8a55c5-875c-45d0-ba8a-643f92e02584",
+      "name": "Respond to Webhook"
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "gpt-6-luna",
+          "mode": "list",
+          "cachedResultName": "GPT-6-LUNA"
+        },
+        "responses": {
+          "values": [
+            {
+              "content": "=Escreva um e-mail curto em pt-BR para o cliente abaixo, sem prometer ganhos e sem garantias.\n\nCliente:\nNome: {{ $json.nome }}\nE-mail: {{ $json.email }}\nPerfil: {{ $json.perfil }}\nSaldo: {{ $json.saldo }}\n\nRecomendação:\nProduto: {{ $json.produto }}\nRentabilidade: {{ $json.rentabilidade }}\nMotivo: {{ $json.motivo }}\n\nRetorne APENAS JSON com:\n{\n  \"to\": \"...\",\n  \"subject\": \"...\",\n  \"text_body\": \"...\",\n  \"html_body\": \"...\"\n}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "typeVersion": 2.3,
+      "position": [
+        672,
+        -560
+      ],
+      "id": "dd959b5f-920c-402d-9c98-9cae8ee7764b",
+      "name": "Message a model",
+      "credentials": {
+        "openAiApi": {
+          "id": "empH4by8BeiXgckC",
+          "name": "OpenAI account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "felixsoaresdarocha@gmail.com",
+        "subject": "={{ $json.subject }}",
+        "message": "={{ $json.html }}\n\norigem: {{ $json.to }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1664,
+        -560
+      ],
+      "id": "38e38e25-f58d-42e8-b070-94ec88ab57a8",
+      "name": "Envia_Mensagem_Investimentos",
+      "webhookId": "71b2d99a-b9d5-4c35-acc5-2b972560bb18",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "K572gh7qa6kpal2T",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "content": "## Envia e-mails com as mensagens personalizadas geradas pela IA\n\nObs: Testado usando e-mail fixo.\nPara produção usar: {{ $json.to }}",
+        "height": 384,
+        "width": 304,
+        "color": "#454E04"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1584,
+        -752
+      ],
+      "typeVersion": 1,
+      "id": "6e988fed-1d91-4a55-a9ff-cd920122fd9f",
+      "name": "Sticky Note7"
+    },
+    {
+      "parameters": {
+        "content": "## Resposta HTTP enviada de volta para O GColab com código da execução",
+        "height": 352,
+        "width": 288,
+        "color": "#031400"
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        2016,
+        -752
+      ],
+      "typeVersion": 1,
+      "id": "ce91c261-19b4-47ba-b383-e4395ca97f9f",
+      "name": "Sticky Note8"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Whk_Busca_Clientes": {
+      "main": [
+        [
+          {
+            "node": "Busca_Dados_Investimentos",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Merge_Combina_Clientes_Investimentos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Busca_Dados_Investimentos": {
+      "main": [
+        [
+          {
+            "node": "Organiza_Dados",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Organiza_Dados": {
+      "main": [
+        [
+          {
+            "node": "Merge_Combina_Clientes_Investimentos",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "Merge_Combina_Clientes_Investimentos": {
+      "main": [
+        [
+          {
+            "node": "Gera_mensagem_Fixa",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gera_mensagem_Fixa": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Cria_Estrutura_Gmail": {
+      "main": [
+        [
+          {
+            "node": "Envia_Mensagem_Investimentos",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Cria_Estrutura_Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Envia_Mensagem_Investimentos": {
+      "main": [
+        [
+          {
+            "node": "Respond to Webhook",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Respond to Webhook": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate"
+  },
+  "versionId": "cd5422d2-aac9-4dbd-9aa8-a8dad0264174",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "f58a6702a6d62e38dda5e1ccc929c81c8bc5531aeefb3e23eb8a1abf490f8e84"
+  },
+  "nodeGroups": [],
+  "id": "2V1QvZydFN3w8bWp",
+  "tags": []
+}
